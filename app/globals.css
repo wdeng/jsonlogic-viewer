@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* React Flow selection and edges styling */
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #2563eb !important;
+}
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px #2563eb inset;
+}
