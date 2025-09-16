@@ -19,6 +19,7 @@ export default function Page() {
   const [importKey, setImportKey] = useState<number>(0);
   const [importedJson, setImportedJson] = useState<any>(SAMPLE);
   const flowRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isValidJson = useMemo(() => {
     try {
@@ -29,15 +30,44 @@ export default function Page() {
     }
   }, [jsonText]);
 
-  const handleImportJson = useCallback(() => {
+  const importJsonLogic = useCallback((jsonData: any) => {
+    setImportedJson(jsonData);
+    setJsonText(JSON.stringify(jsonData, null, 2));
+    setImportKey((k) => k + 1);
+  }, []);
+
+  const handleImportFromFile = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsed = JSON.parse(content);
+        importJsonLogic(parsed);
+      } catch {
+        alert('Invalid JSON file');
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    event.target.value = '';
+  }, [importJsonLogic]);
+
+  const handleImportFromText = useCallback(() => {
     try {
       const parsed = JSON.parse(jsonText);
-      setImportedJson(parsed);
-      setImportKey((k) => k + 1);
+      importJsonLogic(parsed);
     } catch {
-      alert('Invalid JSON');
+      alert('Invalid JSON in text area');
     }
-  }, [jsonText]);
+  }, [jsonText, importJsonLogic]);
 
   const handleExportJson = useCallback(() => {
     const blob = new Blob([jsonText], { type: 'application/json' });
@@ -62,10 +92,18 @@ export default function Page() {
     <div style={{ height: '100vh', display: 'grid', gridTemplateRows: 'auto minmax(0,1fr)', gridTemplateColumns: '1fr', gap: 8, padding: 8 }}>
       <header style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <strong>JsonLogic Flow Editor</strong>
-        <button onClick={handleImportJson} disabled={!isValidJson} style={{ padding: '6px 10px' }}>Import JSON</button>
+        <button onClick={handleImportFromFile} style={{ padding: '6px 10px' }}>Import JSON File</button>
+        <button onClick={handleImportFromText} disabled={!isValidJson} style={{ padding: '6px 10px' }}>Import from Text</button>
         <button onClick={handleExportJson} style={{ padding: '6px 10px' }}>Download JSON</button>
         <button onClick={handleExportPng} style={{ padding: '6px 10px' }}>Download PNG</button>
         <button onClick={handleExportSvg} style={{ padding: '6px 10px' }}>Download SVG</button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <label style={{ fontSize: 12, opacity: 0.8 }}>Validate sample:</label>
           <span style={{ fontSize: 12 }}>

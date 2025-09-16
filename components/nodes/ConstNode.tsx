@@ -18,7 +18,6 @@ export default function ConstNode({ id, data }: Props) {
   }, [data?.valueRaw]);
   return (
     <div style={{ padding: 8, background: '#fff', border: '1px solid #ddd', borderRadius: 8, minWidth: 160 }}>
-      <Handle type="target" position={Position.Left} id="in" />
       <input
         value={value}
         onChange={(e) => data.onChangeValue?.(id, e.target.value)}

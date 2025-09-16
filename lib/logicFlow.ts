@@ -15,9 +15,8 @@ export function jsonLogicToFlow(rule: any): FlowGraph {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  const src: Node = { id: 'src', type: 'start', position: { x: 80, y: 240 }, data: {} };
   const dst: Node = { id: 'dst', type: 'end', position: { x: 860, y: 240 }, data: {} };
-  nodes.push(src, dst);
+  nodes.push(dst);
 
   let yCursor = 120;
   function place(): { x: number; y: number } {
@@ -38,10 +37,10 @@ export function jsonLogicToFlow(rule: any): FlowGraph {
         }
         const id = nextOpId();
         const args: any[] = Array.isArray(exp[key]) ? exp[key] : [exp[key]];
-        nodes.push({ id, type: 'operator', position: place(), data: { op: key, inputs: args.length, outputs: key === 'if' ? 2 : 1 } });
+        nodes.push({ id, type: 'operator', position: place(), data: { op: key } });
         args.forEach((arg, i) => {
           const childId = build(arg);
-          edges.push({ id: `${childId}->${id}#${i}`, source: childId, target: id, targetHandle: `in-${i}`, data: { argIndex: i } });
+          edges.push({ id: `${childId}->${id}`, source: childId, target: id, targetHandle: `in-${i}`, data: { argIndex: i } });
         });
         return id;
       }
@@ -52,7 +51,6 @@ export function jsonLogicToFlow(rule: any): FlowGraph {
   }
 
   const rootId = build(rule);
-  edges.push({ id: `src->${rootId}`, source: 'src', target: rootId });
   edges.push({ id: `${rootId}->dst`, source: rootId, target: 'dst' });
   return { nodes, edges };
 }
@@ -67,7 +65,7 @@ export function flowToJsonLogic(allNodes: Node[], allEdges: Edge[]): any {
 
   const intoDst = (incoming.get('dst') || [])[0];
   if (!intoDst) return {};
-  const rootId = intoDst.source;
+  const rootId: string = intoDst.source;
 
   function toValue(id: string): any {
     const node = idToNode.get(id);
@@ -87,14 +85,11 @@ export function flowToJsonLogic(allNodes: Node[], allEdges: Edge[]): any {
       const children = (incoming.get(node.id) || [])
         .slice()
         .sort((a, b) => {
-          const ai = typeof a.targetHandle === 'string' && a.targetHandle.startsWith('in-')
-            ? Number(a.targetHandle.split('in-')[1])
-            : Number((a.data as any)?.argIndex ?? Number.MAX_SAFE_INTEGER);
-          const bi = typeof b.targetHandle === 'string' && b.targetHandle.startsWith('in-')
-            ? Number(b.targetHandle.split('in-')[1])
-            : Number((b.data as any)?.argIndex ?? Number.MAX_SAFE_INTEGER);
+          const ai = Number((a.data as any)?.argIndex ?? Number.MAX_SAFE_INTEGER);
+          const bi = Number((b.data as any)?.argIndex ?? Number.MAX_SAFE_INTEGER);
           return ai - bi;
-        });
+        })
+        .filter((e) => Number.isFinite(Number((e.data as any)?.argIndex)));
       const args = children.map((e) => toValue(e.source));
       const op = String((node.data as any)?.op ?? '');
       return { [op]: args } as Record<string, unknown>;
